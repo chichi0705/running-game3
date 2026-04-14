@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>四月份萌寵進化大冒險 - 28強名單修正版</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'ZCOOL KuaiLe', sans-serif; background-color: #f0fdfa; overflow-x: hidden; }
+        .monster-bounce { animation: bounce 2.2s infinite ease-in-out; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.02, 0.98); }
+        }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #5eead4; border-radius: 10px; }
+        .btn-active:active { transform: scale(0.95) translateY(5px); box-shadow: none !important; }
+        .stat-card { background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border: 2px solid #def7e5; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'april-pet-evo-v4';
+
+        window.FB = { db, doc, setDoc, collection, onSnapshot, auth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, appId };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // 名單已將 陳佑麟 修正為 陳侑麟
+        const NAMES = ["鄭程元", "黃天福", "陳侑麟", "徐睦桓", "廖康宇", "王又恩", "曾喜澤", "張劭宇", "王習聿", "黃守睿", "林成駿", "陳品齊", "苑世為", "廖崇聿", "李昀貞", "王岱扉", "梁庭榛", "陳詩穎", "黃歆媛", "盧怡安", "魏若樺", "林可芯", "周芫亘", "墜書悅", "秦若瑜", "王育安", "黃品瑜", "陳侑承"];
+
+        const getTraits = (name) => {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) { hash = ((hash << 5) - hash) + name.charCodeAt(i); hash |= 0; }
+            const s = Math.abs(hash);
+            const vibrantThemes = [
+                { body: '#FF7E67', belly: '#6EC6FF', sub: '#FFE66D', stroke: '#333' }, 
+                { body: '#A78BFA', belly: '#FDE047', sub: '#22D3EE', stroke: '#312e81' },
+                { body: '#FB923C', belly: '#4ECDC4', sub: '#A7F3D0', stroke: '#451a03' },
+                { body: '#F472B6', belly: '#34D399', sub: '#FBBF24', stroke: '#500724' },
+                { body: '#06b6d4', belly: '#fb7185', sub: '#FDE047', stroke: '#083344' },
+                { body: '#84CC16', belly: '#D946EF', sub: '#FFFFFF', stroke: '#1a2e05' },
+                { body: '#FCD34D', belly: '#6366F1', spot: '#F87171', sub: '#422006' }
+            ];
+            return { seed: s, colors: vibrantThemes[s % vibrantThemes.length], ear: (s >> 2) % 4 };
+        };
+
+        const MonsterRenderer = ({ name, laps, size = 200, isMini = false }) => {
+            const { seed, colors, ear } = useMemo(() => getTraits(name), [name]);
+            
+            let stage = 0;
+            if (laps >= 15) {
+                stage = 1 + Math.floor((laps - 15) / 10);
+            }
+            const effectiveStage = Math.min(stage, 6);
+            const isEgg = effectiveStage === 0;
+
+            const headR = isEgg ? 0 : 42 - (effectiveStage * 3.6);
+            const bodyH = isEgg ? 0 : 12 + (effectiveStage * 11);
+            const bodyW = isEgg ? 0 : 38 + (effectiveStage * 5);
+
+            return (
+                <svg width={size} height={size * 1.15} viewBox="0 0 100 120" className={effectiveStage >= 6 ? "drop-shadow-[0_0_15px_gold]" : ""}>
+                    <defs>
+                        <radialGradient id={`gBody-${seed}`} cx="35%" cy="35%" r="65%">
+                            <stop offset="0%" stopColor="white" stopOpacity="0.4" />
+                            <stop offset="100%" stopColor={colors.body} />
+                        </radialGradient>
+                    </defs>
+                    <ellipse cx="50" cy="115" rx={isMini ? 30 : 20 + effectiveStage * 6} ry="8" fill="black" opacity="0.1" />
+                    <g className={isMini ? "" : "monster-bounce"}>
+                        {isEgg ? (
+                            <g>
+                                <path d="M50 35 C30 35 24 92 50 92 C76 92 70 35 50 35 Z" fill={colors.body} stroke={colors.stroke} strokeWidth="1.5" />
+                                <circle cx="42" cy="65" r={isMini ? 3 : 5} fill={colors.sub || '#fff'} opacity="0.6" />
+                            </g>
+                        ) : (
+                            <g>
+                                <g fill={colors.stroke}>
+                                    <rect x="30" y="100" width="15" height="15" rx="7.5" />
+                                    <rect x="55" y="100" width="15" height="15" rx="7.5" />
+                                    {effectiveStage >= 2 && <g fill={colors.body} stroke={colors.stroke}><rect x={50-bodyW/2-10} y="75" width="12" height="25" rx="6" transform="rotate(20,35,75)"/><rect x={50+bodyW/2-2} y="75" width="12" height="25" rx="6" transform="rotate(-20,65,75)"/></g>}
+                                </g>
+                                <rect x={50-bodyW/2} y={112-bodyH} width={bodyW} height={bodyH} rx={bodyW/2.5} fill={`url(#gBody-${seed})`} stroke={colors.stroke} strokeWidth="1" />
+                                <ellipse cx="50" cy={112-bodyH/2} rx={bodyW/3} ry={bodyH/2.5} fill={colors.belly} opacity="0.9" />
+                                <g transform={`translate(0, ${112-bodyH-headR*0.75})`}>
+                                    <g fill={colors.body} stroke={colors.stroke} strokeWidth={isMini ? 1 : 2}>
+                                        {ear === 0 && <path d="M25 15 L5 -10 L40 10 Z M75 15 L95 -10 L60 10 Z" />}
+                                        {ear === 1 && <><circle cx="20" cy="15" r="10" /><circle cx="80" cy="15" r="10" /></>}
+                                        {ear === 2 && <><ellipse cx="28" cy="0" rx="7" ry="25" transform="rotate(-15,28,0)" /><ellipse cx="72" cy="0" rx="7" ry="25" transform="rotate(15,72,0)" /></>}
+                                        {ear === 3 && <><rect x="12" y="15" width="12" height="30" rx="6" /><rect x="76" y="15" width="12" height="30" rx="6" /></>}
+                                    </g>
+                                    <circle cx="50" cy="30" r={headR} fill={`url(#gBody-${seed})`} stroke={colors.stroke} strokeWidth="1" />
+                                    <g transform="translate(0, 5)">
+                                        <circle cx="38" cy="25" r={headR/5} fill="white" />
+                                        <circle cx="62" cy="25" r={headR/5} fill="white" />
+                                        <circle cx="38" cy="25" r={headR/10} fill="black" />
+                                        <circle cx="62" cy="25" r={headR/10} fill="black" />
+                                    </g>
+                                </g>
+                            </g>
+                        )}
+                    </g>
+                </svg>
+            );
+        };
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [data, setData] = useState({});
+            const [isReady, setIsReady] = useState(false);
+            const [showConfirm, setShowConfirm] = useState(false);
+
+            useEffect(() => {
+                const init = async () => {
+                    const { auth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, db, collection, onSnapshot, appId } = window.FB;
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } 
+                    else { await signInAnonymously(auth); }
+                    onAuthStateChanged(auth, (u) => {
+                        if (u) {
+                            const q = collection(db, 'artifacts', appId, 'public', 'data', 'players');
+                            onSnapshot(q, (snap) => {
+                                const d = {};
+                                snap.forEach(doc => d[doc.id] = doc.data());
+                                setData(d);
+                                setIsReady(true);
+                            }, (err) => console.error(err));
+                        }
+                    });
+                    const saved = localStorage.getItem('april_pet_v4_user');
+                    if (saved) setUser(saved);
+                };
+                init();
+            }, []);
+
+            const sync = async (val) => {
+                if (!user) return;
+                const { db, doc, setDoc, appId } = window.FB;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', user), { laps: Math.max(0, val), updatedAt: Date.now() }, { merge: true });
+            };
+
+            const adminFix = () => {
+                const val = prompt(`[管理權限] 修正 ${user} 的圈數：`, data[user]?.laps || 0);
+                if (val !== null && !isNaN(val)) sync(parseInt(val));
+            };
+
+            const stats = useMemo(() => {
+                const values = Object.values(data);
+                const totalLaps = values.reduce((acc, curr) => acc + (curr.laps || 0), 0);
+                const hatchedCount = values.filter(v => v.laps >= 15).length;
+                const avgLaps = values.length > 0 ? (totalLaps / NAMES.length).toFixed(1) : 0;
+                return { totalLaps, hatchedCount, avgLaps };
+            }, [data]);
+
+            if (!isReady) return <div className="min-h-screen flex items-center justify-center font-black text-teal-500 animate-pulse text-2xl tracking-widest bg-white">載入四月份班級名單中...</div>;
+
+            if (!user) {
+                return (
+                    <div className="min-h-screen p-8 flex flex-col items-center animate-in fade-in duration-700">
+                        <header className="mb-12 text-center">
+                            <h1 className="text-6xl font-black text-teal-800 mb-4 tracking-tighter italic">🌸 四月份萌寵進化賽 🐾</h1>
+                            <p className="text-teal-500 font-bold text-xl uppercase tracking-widest mb-8">April Class Marathon</p>
+                            
+                            <div className="grid grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
+                                <div className="stat-card p-6 rounded-[2rem] shadow-md border-b-4 border-teal-200">
+                                    <div className="text-sm font-black text-teal-400 uppercase italic">全班總圈數</div>
+                                    <div className="text-5xl font-black text-teal-700">{stats.totalLaps}</div>
+                                </div>
+                                <div className="stat-card p-6 rounded-[2rem] shadow-md border-b-4 border-orange-200">
+                                    <div className="text-sm font-black text-orange-400 uppercase italic">已破蛋孵化</div>
+                                    <div className="text-5xl font-black text-orange-600">{stats.hatchedCount} / 28</div>
+                                </div>
+                                <div className="stat-card p-6 rounded-[2rem] shadow-md border-b-4 border-indigo-200">
+                                    <div className="text-sm font-black text-indigo-400 uppercase italic">全班平均</div>
+                                    <div className="text-5xl font-black text-indigo-600">{stats.avgLaps}</div>
+                                </div>
+                            </div>
+                        </header>
+                        
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 w-full max-w-7xl">
+                            {NAMES.map(n => (
+                                <button key={n} onClick={() => { setUser(n); localStorage.setItem('april_pet_v4_user', n); }} className="bg-white p-6 rounded-[2.5rem] shadow hover:shadow-xl hover:-translate-y-2 transition-all border-4 border-transparent hover:border-teal-400 font-bold text-xl text-slate-700 flex flex-col items-center">
+                                    {n}
+                                    <div className="text-sm text-teal-400 font-black mt-2 bg-teal-50 px-3 py-0.5 rounded-full">{data[n]?.laps || 0} 圈</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            const myLaps = data[user]?.laps || 0;
+            const currentLv = myLaps < 15 ? 0 : 1 + Math.floor((myLaps - 15) / 10);
+            const stageTitles = ["神祕四月蛋", "初生萌友期", "多彩成長期", "陽光青年期", "強壯守護者", "英雄傳奇期", "究極神獸期"];
+            const nextVal = myLaps < 15 ? 15 - myLaps : 10 - ((myLaps - 15) % 10);
+            const sortedList = NAMES.map(n => ({ name: n, laps: data[n]?.laps || 0 })).sort((a, b) => b.laps - a.laps);
+
+            return (
+                <div className="min-h-screen p-4 flex flex-col items-center">
+                    <div className="w-full max-w-5xl bg-slate-900 rounded-full py-4 px-10 mb-8 flex justify-between items-center shadow-2xl text-white">
+                        <div className="flex items-center gap-2">
+                            <span className="text-teal-400 font-black">班級總計：</span>
+                            <span className="text-2xl font-black">{stats.totalLaps} 圈</span>
+                        </div>
+                        <div className="h-4 w-px bg-slate-700"></div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-orange-400 font-black">破蛋數：</span>
+                            <span className="text-2xl font-black">{stats.hatchedCount} 位</span>
+                        </div>
+                        <div className="h-4 w-px bg-slate-700"></div>
+                        <div className="flex items-center gap-2 font-black italic">
+                            🏃 四月份運動目標連線中
+                        </div>
+                    </div>
+
+                    <div className="w-full max-w-3xl bg-white rounded-[5rem] shadow-2xl p-12 text-center border-8 border-white relative mb-16 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-teal-400 via-yellow-400 to-rose-400"></div>
+                        <div className="flex justify-between items-center mb-10">
+                            <div className="bg-teal-600 text-white px-8 py-2 rounded-full font-black text-xl shadow-lg">Lv.{currentLv} {stageTitles[Math.min(currentLv, 6)]}</div>
+                            <div className="flex gap-4 items-center">
+                                <button onClick={adminFix} className="text-teal-200 hover:text-teal-500 font-bold">手動修正</button>
+                                <button onClick={() => { setUser(null); localStorage.removeItem('april_pet_v4_user'); }} className="text-slate-300 underline font-bold">換名字</button>
+                            </div>
+                        </div>
+
+                        <h2 className="text-9xl font-black text-slate-800 mb-8 tracking-tighter leading-none italic">{user}</h2>
+                        
+                        <div className="bg-teal-50/50 rounded-[6rem] h-[500px] flex items-center justify-center mb-12 shadow-inner border-4 border-white relative">
+                            <MonsterRenderer name={user} laps={myLaps} size={450} />
+                            {currentLv < 6 && (
+                                <div className="absolute bottom-10 bg-white/95 px-10 py-4 rounded-full font-black text-teal-600 shadow-2xl border-2 border-teal-100 animate-pulse">
+                                    {myLaps < 15 ? "距離破蛋還要：" : "距離下次進化："}
+                                    <span className="text-rose-500 text-5xl mx-2 font-black">{nextVal}</span> 圈
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mb-16">
+                            <div className="text-[140px] font-black text-teal-600 leading-none mb-2 italic">{myLaps} <span className="text-3xl text-slate-300 font-bold not-italic tracking-widest">圈</span></div>
+                        </div>
+
+                        <div className="flex flex-col gap-8">
+                            <button onClick={() => sync(myLaps + 1)} className="bg-slate-900 text-white w-full py-16 rounded-[4rem] text-9xl shadow-[0_30px_0_#000] active:translate-y-4 active:shadow-none transition-all flex flex-col items-center btn-active">
+                                <span className="mb-4">🐾</span>
+                                <span className="text-5xl font-black italic tracking-widest uppercase">完成一圈</span>
+                            </button>
+
+                            {!showConfirm ? (
+                                <button onClick={() => setShowConfirm(true)} className="text-slate-300 hover:text-rose-400 font-bold text-lg underline decoration-dotted">按錯了？扣除一圈</button>
+                            ) : (
+                                <div className="bg-rose-50 p-8 rounded-[3rem] border-4 border-rose-100 flex items-center justify-between animate-in slide-in-from-bottom-4 shadow-xl">
+                                    <span className="text-rose-600 font-black text-2xl italic">扣除 1 圈嗎？</span>
+                                    <div className="flex gap-6">
+                                        <button onClick={() => { sync(myLaps - 1); setShowConfirm(false); }} className="bg-rose-500 text-white px-12 py-3 rounded-[2rem] font-black shadow-md text-xl">是的</button>
+                                        <button onClick={() => setShowConfirm(false)} className="bg-white text-slate-400 px-12 py-3 rounded-[2rem] font-black shadow-sm text-xl border">取消</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="w-full max-w-7xl bg-white/90 backdrop-blur rounded-[4rem] p-12 shadow-xl border-4 border-white mb-20">
+                        <div className="flex justify-between items-center mb-12 border-b-4 border-teal-50 pb-6">
+                            <h3 className="text-5xl font-black text-slate-700 flex items-center gap-6 italic tracking-tighter">🏆 四月份即時競賽排行榜</h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-10">
+                            {sortedList.map((p, idx) => {
+                                const isCurrent = p.name === user;
+                                return (
+                                    <div key={p.name} className={`relative p-6 rounded-[3rem] border-4 transition-all duration-500 ${isCurrent ? 'bg-teal-50 border-teal-300 scale-110 z-20 shadow-2xl' : 'bg-white/50 border-slate-100'}`}>
+                                        <div className={`absolute -top-5 -left-5 w-12 h-12 rounded-full flex items-center justify-center text-white font-black shadow-md border-4 border-white text-lg ${idx < 3 ? 'bg-yellow-400' : 'bg-slate-300'}`}>
+                                            {idx + 1}
+                                        </div>
+                                        <div className="h-32 flex items-center justify-center mb-4">
+                                            <MonsterRenderer name={p.name} laps={p.laps} size={110} isMini={true} />
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-black text-slate-700 text-xl truncate mb-1">{p.name}</div>
+                                            <div className="text-3xl font-black text-teal-600 italic leading-none">{p.laps}</div>
+                                        </div>
+                                        <div className="mt-4 w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                            <div className="bg-teal-400 h-full transition-all duration-1000" style={{ width: `${Math.min((p.laps/65)*100, 100)}%` }}></div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
