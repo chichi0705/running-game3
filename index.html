@@ -12,110 +12,69 @@
     <style>
         body { font-family: 'ZCOOL KuaiLe', sans-serif; background-color: #f0fdfa; overflow-x: hidden; }
         .monster-bounce { animation: bounce 2.2s infinite ease-in-out; }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-10px) scale(1.02, 0.98); }
-        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-10px) scale(1.02, 0.98); } }
         .btn-active:active { transform: scale(0.95) translateY(5px); box-shadow: none !important; }
         .stat-card { background: white; border: 3px solid #ccfbf1; box-shadow: 0 8px 0 #ccfbf1; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #5eead4; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
 
-        // 28 位同學名單 (已修正 陳侑麟)
+        // 已填入您提供的雲端 ID
+        const SYNC_ID = "2e4fa9da5e86da8df3e0"; 
+        const API_URL = `https://api.npoint.io/${SYNC_ID}`;
+
         const NAMES = ["鄭程元", "黃天福", "陳侑麟", "徐睦桓", "廖康宇", "王又恩", "曾喜澤", "張劭宇", "王習聿", "黃守睿", "林成駿", "陳品齊", "苑世為", "廖崇聿", "李昀貞", "王岱扉", "梁庭榛", "陳詩穎", "黃歆媛", "盧怡安", "魏若樺", "林可芯", "周芫亘", "墜書悅", "秦若瑜", "王育安", "黃品瑜", "陳侑承"];
 
-        // 根據姓名生成隨機特徵
         const getTraits = (name) => {
             let hash = 0;
             for (let i = 0; i < name.length; i++) { hash = ((hash << 5) - hash) + name.charCodeAt(i); hash |= 0; }
             const s = Math.abs(hash);
             const themes = [
-                { body: '#FF7E67', belly: '#6EC6FF', accent: '#FFE66D', stroke: '#333' }, 
-                { body: '#A78BFA', belly: '#FDE047', accent: '#22D3EE', stroke: '#312e81' },
-                { body: '#FB923C', belly: '#4ECDC4', accent: '#A7F3D0', stroke: '#451a03' },
-                { body: '#F472B6', belly: '#34D399', accent: '#FBBF24', stroke: '#500724' },
-                { body: '#06b6d4', belly: '#fb7185', accent: '#FDE047', stroke: '#083344' },
-                { body: '#84CC16', belly: '#D946EF', accent: '#FFFFFF', stroke: '#1a2e05' },
-                { body: '#FCD34D', belly: '#6366F1', accent: '#F87171', stroke: '#422006' }
+                { body: '#FF7E67', belly: '#6EC6FF', stroke: '#333' }, 
+                { body: '#A78BFA', belly: '#FDE047', stroke: '#312e81' },
+                { body: '#FB923C', belly: '#4ECDC4', stroke: '#451a03' },
+                { body: '#F472B6', belly: '#34D399', stroke: '#500724' },
+                { body: '#06b6d4', belly: '#fb7185', stroke: '#083344' }
             ];
-            return { seed: s, colors: themes[s % themes.length], ear: (s >> 2) % 4 };
+            return { seed: s, colors: themes[s % themes.length] };
         };
 
         const Monster = ({ name, laps, size = 200, isMini = false }) => {
-            const { seed, colors, ear } = useMemo(() => getTraits(name), [name]);
-            
-            // 進化邏輯：15圈破蛋，之後每10圈晉級
+            const { seed, colors } = useMemo(() => getTraits(name), [name]);
             let stage = laps < 15 ? 0 : 1 + Math.floor((laps - 15) / 10);
             const effectiveStage = Math.min(stage, 6);
             const isEgg = effectiveStage === 0;
-
-            // 比例進化：頭隨進化變小，身隨進化變大
             const headR = isEgg ? 0 : 42 - (effectiveStage * 3.5);
             const bodyH = isEgg ? 0 : 12 + (effectiveStage * 11);
             const bodyW = isEgg ? 0 : 38 + (effectiveStage * 5);
 
             return (
-                <svg width={size} height={size * 1.15} viewBox="0 0 100 120" className={effectiveStage >= 6 ? "drop-shadow-[0_0_15px_gold]" : ""}>
-                    <defs>
-                        <radialGradient id={`g-${seed}`} cx="35%" cy="35%" r="65%">
-                            <stop offset="0%" stopColor="white" stopOpacity="0.4" />
-                            <stop offset="100%" stopColor={colors.body} />
-                        </radialGradient>
-                    </defs>
-                    
+                <svg width={size} height={size * 1.15} viewBox="0 0 100 120">
+                    <defs><radialGradient id={`g-${seed}`} cx="35%" cy="35%" r="65%"><stop offset="0%" stopColor="white" stopOpacity="0.4" /><stop offset="100%" stopColor={colors.body} /></radialGradient></defs>
                     <ellipse cx="50" cy="115" rx={isMini ? 30 : 20 + effectiveStage * 6} ry="8" fill="black" opacity="0.1" />
-                    
                     <g className={isMini ? "" : "monster-bounce"}>
                         {isEgg ? (
                             <g>
                                 <path d="M50 35 C30 35 24 92 50 92 C76 92 70 35 50 35 Z" fill={colors.body} stroke={colors.stroke} strokeWidth="1.5" />
-                                {/* 蛋殼花紋：0-14 圈無眼睛，只有裝飾 */}
-                                {seed % 3 === 0 && (
-                                    <g opacity="0.4" fill="white">
-                                        <circle cx="40" cy="55" r="5" /><circle cx="65" cy="65" r="4" /><circle cx="45" cy="75" r="3" />
-                                    </g>
-                                )}
-                                {seed % 3 === 1 && (
-                                    <g opacity="0.3" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
-                                        <path d="M35 55 Q50 50 65 55" /><path d="M30 65 Q50 60 70 65" /><path d="M35 75 Q50 70 65 75" />
-                                    </g>
-                                )}
-                                {seed % 3 === 2 && (
-                                    <g opacity="0.4" fill="white">
-                                        <rect x="40" y="52" width="8" height="8" rx="2" transform="rotate(45 44 56)" />
-                                        <rect x="62" y="65" width="6" height="6" rx="1" transform="rotate(45 65 68)" />
-                                    </g>
+                                {seed % 2 === 0 ? (
+                                    <circle cx="42" cy="65" r="4" fill="white" opacity="0.4" />
+                                ) : (
+                                    <path d="M40 60 Q50 55 60 60" fill="none" stroke="white" strokeWidth="2" opacity="0.4" />
                                 )}
                             </g>
                         ) : (
                             <g>
-                                {/* 肢體 */}
-                                <g fill={colors.stroke}>
-                                    <rect x="30" y="100" width="15" height="15" rx="7.5" />
-                                    <rect x="55" y="100" width="15" height="15" rx="7.5" />
-                                    {effectiveStage >= 2 && <g fill={colors.body} stroke={colors.stroke}><rect x={50-bodyW/2-10} y="75" width="12" height="25" rx="6" transform="rotate(20,35,75)"/><rect x={50+bodyW/2-2} y="75" width="12" height="25" rx="6" transform="rotate(-20,65,75)"/></g>}
-                                </g>
-                                {/* 軀幹 */}
-                                <rect x={50-bodyW/2} y={112-bodyH} width={bodyW} height={bodyH} rx={bodyW/2.5} fill={`url(#g-${seed})`} stroke={colors.stroke} strokeWidth="1" />
+                                <g fill={colors.stroke}><rect x="30" y="100" width="15" height="15" rx="7.5" /><rect x="55" y="100" width="15" height="15" rx="7.5" /></g>
+                                <rect x={50-bodyW/2} y={112-bodyH} width={bodyW} height={bodyH} rx={bodyW/2.5} fill={`url(#g-${seed})`} stroke={colors.stroke} />
                                 <ellipse cx="50" cy={112-bodyH/2} rx={bodyW/3} ry={bodyH/2.5} fill={colors.belly} opacity="0.9" />
-                                {/* 頭部與大眼睛 (孵化後必有眼睛) */}
                                 <g transform={`translate(0, ${112-bodyH-headR*0.75})`}>
-                                    <circle cx="50" cy="30" r={headR} fill={`url(#g-${seed})`} stroke={colors.stroke} strokeWidth="1" />
-                                    <g>
-                                        <circle cx="38" cy="25" r={headR/5} fill="white" />
-                                        <circle cx="62" cy="25" r={headR/5} fill="white" />
-                                        <circle cx="38" cy="25" r={headR/10} fill={colors.stroke} />
-                                        <circle cx="62" cy="25" r={headR/10} fill={colors.stroke} />
-                                        <circle cx="39" cy="23" r={headR/25} fill="white" opacity="0.8" />
-                                        <circle cx="63" cy="23" r={headR/25} fill="white" opacity="0.8" />
-                                    </g>
+                                    <circle cx="50" cy="30" r={headR} fill={`url(#g-${seed})`} stroke={colors.stroke} />
+                                    <circle cx="38" cy="25" r={headR/5} fill="white" /><circle cx="62" cy="25" r={headR/5} fill="white" />
+                                    <circle cx="38" cy="25" r={headR/10} fill={colors.stroke} /><circle cx="62" cy="25" r={headR/10} fill={colors.stroke} />
                                     <path d="M46 38 Q50 42 54 38" fill="none" stroke={colors.stroke} strokeWidth="2" strokeLinecap="round" />
                                 </g>
                             </g>
@@ -127,137 +86,121 @@
 
         const App = () => {
             const [user, setUser] = useState(null);
-            const [localData, setLocalData] = useState({});
-            const [confirming, setConfirming] = useState(false);
+            const [data, setData] = useState({});
+            const [loading, setLoading] = useState(true);
+            const dataRef = useRef({}); // 用來在更新時對比
+
+            const fetchData = async () => {
+                try {
+                    const res = await fetch(API_URL);
+                    if (res.ok) {
+                        const json = await res.json();
+                        setData(json || {});
+                        dataRef.current = json || {};
+                    }
+                    setLoading(false);
+                } catch (e) { console.error("同步讀取失敗", e); }
+            };
 
             useEffect(() => {
-                const data = {};
-                NAMES.forEach(n => { data[n] = parseInt(localStorage.getItem(`april_run_final_${n}`) || "0"); });
-                setLocalData(data);
-                const savedUser = localStorage.getItem('april_pet_final_active');
-                if (savedUser) setUser(savedUser);
+                fetchData();
+                const timer = setInterval(fetchData, 5000);
+                const saved = localStorage.getItem('april_user_id');
+                if (saved) setUser(saved);
+                return () => clearInterval(timer);
             }, []);
 
-            const updateLaps = (val) => {
-                const newVal = Math.max(0, val);
-                setLocalData(prev => ({ ...prev, [user]: newVal }));
-                localStorage.setItem(`april_run_final_${user}`, newVal);
+            const sync = async (newVal) => {
+                if (!user) return;
+                const updated = { ...dataRef.current, [user]: Math.max(0, newVal) };
+                setData(updated);
+                dataRef.current = updated;
+                try {
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updated)
+                    });
+                } catch (e) { console.error("雲端更新失敗", e); }
             };
 
-            const manualEdit = () => {
-                const val = prompt(`[管理權限] 修正 ${user} 的圈數：`, localData[user] || 0);
-                if (val !== null && !isNaN(val)) updateLaps(parseInt(val));
-            };
-
-            const classStats = useMemo(() => {
-                const laps = Object.values(localData);
+            const stats = useMemo(() => {
+                const laps = NAMES.map(n => data[n] || 0);
                 const total = laps.reduce((a, b) => a + b, 0);
                 const hatched = laps.filter(l => l >= 15).length;
-                return { total, hatched, average: laps.length > 0 ? (total / NAMES.length).toFixed(1) : 0 };
-            }, [localData]);
+                return { total, hatched, average: (total / NAMES.length).toFixed(1) };
+            }, [data]);
 
-            const sortedList = useMemo(() => {
-                return NAMES.map(n => ({ name: n, laps: localData[n] || 0 })).sort((a, b) => b.laps - a.laps);
-            }, [localData]);
+            const sorted = NAMES.map(n => ({ name: n, laps: data[n] || 0 })).sort((a, b) => b.laps - a.laps);
 
-            const StatsBoard = () => (
-                <div className="w-full max-w-4xl mx-auto grid grid-cols-3 gap-4 mb-8">
-                    <div className="stat-card p-4 rounded-[2rem] text-center">
-                        <div className="text-teal-400 text-[10px] font-black uppercase italic leading-tight">全班總圈數</div>
-                        <div className="text-3xl font-black text-teal-700">{classStats.total}</div>
-                    </div>
-                    <div className="stat-card p-4 rounded-[2rem] text-center border-orange-100 shadow-[#fed7aa]">
-                        <div className="text-orange-400 text-[10px] font-black uppercase italic leading-tight">已孵化數量</div>
-                        <div className="text-3xl font-black text-orange-600">{classStats.hatched} <small className="text-xs">/ 28</small></div>
-                    </div>
-                    <div className="stat-card p-4 rounded-[2rem] text-center border-indigo-100 shadow-[#c7d2fe]">
-                        <div className="text-indigo-400 text-[10px] font-black uppercase italic leading-tight">全班平均</div>
-                        <div className="text-3xl font-black text-indigo-700">{classStats.average}</div>
-                    </div>
+            if (loading) return (
+                <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+                    <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <div className="font-black text-teal-600 text-xl animate-pulse">正在開啟四月份雲端通道...</div>
                 </div>
             );
-
-            const Leaderboard = () => (
-                <div className="w-full max-w-5xl mx-auto bg-white/70 backdrop-blur rounded-[3rem] p-8 border-4 border-white shadow-xl mt-12 mb-20">
-                    <h3 className="text-3xl font-black text-slate-700 mb-8 italic">🏆 四月份即時進度看板</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-6">
-                        {sortedList.map((p, idx) => (
-                            <div key={p.name} className={`relative p-4 rounded-3xl border-2 transition-all ${p.name === user ? 'bg-teal-50 border-teal-300 scale-105 shadow-md z-10' : 'bg-white/50 border-slate-100'}`}>
-                                <div className="absolute -top-2 -left-2 w-7 h-7 bg-yellow-400 rounded-full flex items-center justify-center text-white font-black text-[10px] border-2 border-white">{idx + 1}</div>
-                                <div className="h-20 flex items-center justify-center mb-2"><Monster name={p.name} laps={p.laps} size={75} isMini={true} /></div>
-                                <div className="text-center font-black text-slate-700 text-xs truncate">{p.name}</div>
-                                <div className="text-center text-lg font-black text-teal-600 leading-none mt-1">{p.laps} 圈</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-            if (!user) {
-                return (
-                    <div className="min-h-screen p-8 flex flex-col items-center">
-                        <header className="mb-10 text-center">
-                            <h1 className="text-6xl font-black text-teal-800 mb-6 italic leading-tight">🌸 四月份萌寵進化賽 🐾</h1>
-                            <StatsBoard />
-                            <p className="text-teal-500 font-bold text-xl uppercase tracking-widest mt-8 italic underline">點選名字開始四月大挑戰</p>
-                        </header>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 w-full max-w-7xl mb-12">
-                            {NAMES.map(n => (
-                                <button key={n} onClick={() => { setUser(n); localStorage.setItem('april_pet_final_active', n); }} className="bg-white p-6 rounded-[2.5rem] shadow hover:shadow-xl transition-all border-4 border-transparent hover:border-teal-400 font-bold text-xl text-slate-700">
-                                    {n}<div className="text-sm text-teal-400 mt-2 bg-teal-50 rounded-full px-2">{localData[n] || 0} 圈</div>
-                                </button>
-                            ))}
-                        </div>
-                        <Leaderboard />
-                    </div>
-                );
-            }
-
-            const myLaps = localData[user] || 0;
-            const currentLv = myLaps < 15 ? 0 : 1 + Math.floor((myLaps - 15) / 10);
-            const nextVal = myLaps < 15 ? 15 - myLaps : 10 - ((myLaps - 15) % 10);
 
             return (
                 <div className="min-h-screen p-4 flex flex-col items-center">
-                    <StatsBoard />
-                    <div className="w-full max-w-2xl bg-white rounded-[5rem] shadow-2xl p-12 text-center border-8 border-white relative mb-12 overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-teal-400 via-yellow-400 to-rose-400"></div>
-                        <div className="flex justify-between items-center mb-10">
-                            <div className="bg-teal-600 text-white px-6 py-1 rounded-full font-black text-sm">Lv.{currentLv} {myLaps < 15 ? '神祕孵化中' : '四月進化中'}</div>
-                            <div className="flex gap-4 items-center">
-                                <button onClick={manualEdit} className="text-teal-200 hover:text-teal-500 font-bold text-sm">管理修正</button>
-                                <button onClick={() => { setUser(null); localStorage.removeItem('april_pet_final_active'); }} className="text-slate-300 underline font-bold text-sm">切換同學</button>
+                    <header className="w-full max-w-4xl grid grid-cols-3 gap-4 mb-8">
+                        <div className="stat-card p-4 rounded-3xl text-center">
+                            <div className="text-teal-400 text-[10px] font-black italic uppercase">全班總圈數</div>
+                            <div className="text-3xl font-black text-teal-700">{stats.total}</div>
+                        </div>
+                        <div className="stat-card p-4 rounded-3xl text-center border-orange-100">
+                            <div className="text-orange-400 text-[10px] font-black italic uppercase">已孵化</div>
+                            <div className="text-3xl font-black text-orange-600">{stats.hatched}/28</div>
+                        </div>
+                        <div className="stat-card p-4 rounded-3xl text-center border-indigo-100">
+                            <div className="text-indigo-400 text-[10px] font-black italic uppercase">平均實力</div>
+                            <div className="text-3xl font-black text-indigo-700">{stats.average}</div>
+                        </div>
+                    </header>
+
+                    {!user ? (
+                        <div className="flex flex-col items-center w-full">
+                            <h1 className="text-5xl font-black text-teal-800 mb-10 italic">🌸 四月進化大冒險 🐾</h1>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 w-full max-w-7xl">
+                                {NAMES.map(n => (
+                                    <button key={n} onClick={() => { setUser(n); localStorage.setItem('april_user_id', n); }} className="bg-white p-6 rounded-3xl shadow-md font-bold text-lg text-slate-700 border-4 border-transparent hover:border-teal-400 transition-all">
+                                        {n}<div className="text-xs text-teal-400 mt-1 font-black">{data[n] || 0} 圈</div>
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                        <h2 className="text-8xl font-black text-slate-800 mb-8 italic tracking-tighter leading-tight">{user}</h2>
-                        <div className="bg-teal-50/50 rounded-[6rem] h-96 flex items-center justify-center mb-10 shadow-inner relative border-4 border-white">
-                            <Monster name={user} laps={myLaps} size={400} />
-                            {currentLv < 6 && (
-                                <div className="absolute bottom-6 bg-white/95 px-8 py-3 rounded-full font-black text-teal-600 shadow-xl border-2 border-teal-100 animate-pulse text-sm">
-                                    {myLaps < 15 ? "距離破蛋還要：" : "距離晉級還要："} <span className="text-rose-500 text-3xl mx-1">{nextVal}</span> 圈
+                    ) : (
+                        <div className="w-full max-w-2xl bg-white rounded-[4rem] shadow-2xl p-10 text-center border-8 border-white relative mb-12">
+                            <button onClick={() => { setUser(null); localStorage.removeItem('april_user_id'); }} className="absolute top-6 right-8 text-slate-300 underline font-bold">換人</button>
+                            <h2 className="text-8xl font-black text-slate-800 mb-6 italic tracking-tighter">{user}</h2>
+                            <div className="bg-teal-50/50 rounded-[4rem] h-80 flex items-center justify-center mb-8 shadow-inner border-4 border-white relative">
+                                <Monster name={user} laps={data[user] || 0} size={350} />
+                                <div className="absolute bottom-4 bg-white/90 px-6 py-2 rounded-full font-black text-teal-600 shadow-md text-xs">
+                                    {(data[user] || 0) < 15 ? `距離破蛋還要 ${15 - (data[user] || 0)} 圈` : `距離晉級還要 ${10 - ((data[user] - 15) % 10)} 圈`}
                                 </div>
-                            )}
-                        </div>
-                        <div className="text-[120px] font-black text-teal-600 leading-none mb-12 italic tracking-tighter">{myLaps} <span className="text-3xl text-slate-300 font-bold not-italic">圈</span></div>
-                        <div className="flex flex-col gap-6">
-                            <button onClick={() => updateLaps(myLaps + 1)} className="bg-slate-900 text-white w-full py-16 rounded-[4rem] shadow-[0_20px_0_#000] btn-active transition-all flex flex-col items-center group">
-                                <span className="mb-4 text-9xl group-active:scale-90 transition-transform">🐾</span>
-                                <span className="text-4xl font-black italic tracking-widest">完成一圈</span>
+                            </div>
+                            <div className="text-[120px] font-black text-teal-600 leading-none mb-10 italic tracking-tighter">{data[user] || 0} <span className="text-2xl text-slate-300 not-italic">圈</span></div>
+                            <button onClick={() => sync((data[user] || 0) + 1)} className="bg-slate-900 text-white w-full py-12 rounded-[3rem] text-8xl shadow-[0_15px_0_#000] btn-active transition-all flex flex-col items-center">
+                                <span className="mb-4 text-8xl">🐾</span><span className="text-4xl font-black italic tracking-widest">完成一圈</span>
                             </button>
-                            {!confirming ? (
-                                <button onClick={() => setConfirming(true)} className="text-slate-300 hover:text-rose-400 font-bold text-lg underline decoration-dotted">按錯了？扣除一圈</button>
-                            ) : (
-                                <div className="bg-rose-50 p-6 rounded-[3rem] border-4 border-rose-100 flex items-center justify-between shadow-xl">
-                                    <span className="text-rose-600 font-black italic">確定扣除這 1 圈嗎？</span>
-                                    <div className="flex gap-4">
-                                        <button onClick={() => { updateLaps(myLaps - 1); setConfirming(false); }} className="bg-rose-500 text-white px-8 py-2 rounded-2xl font-black shadow-md">是的</button>
-                                        <button onClick={() => setConfirming(false)} className="bg-white text-slate-400 px-8 py-2 rounded-2xl font-black border">取消</button>
-                                    </div>
+                            <button onClick={() => sync((data[user] || 0) - 1)} className="mt-8 text-slate-300 text-sm underline font-bold hover:text-red-400">按錯了？扣除一圈</button>
+                        </div>
+                    )}
+
+                    <div className="w-full max-w-5xl bg-white/70 backdrop-blur rounded-[3rem] p-8 border-4 border-white shadow-xl mb-20">
+                        <h3 className="text-2xl font-black text-slate-700 mb-8 flex items-center gap-3 italic">
+                            🏆 全班實力排行榜 <span className="text-[10px] bg-teal-500 text-white px-2 py-0.5 rounded-full not-italic animate-pulse">連線中</span>
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-6">
+                            {sorted.map((p, idx) => (
+                                <div key={p.name} className={`relative p-3 rounded-3xl border-2 transition-all ${p.name === user ? 'bg-teal-50 border-teal-300 scale-105 shadow-md z-10' : 'bg-white border-slate-50'}`}>
+                                    <div className="absolute -top-2 -left-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-white font-black text-[10px] border-2 border-white shadow-sm">{idx + 1}</div>
+                                    <div className="text-center font-black text-slate-700 text-xs truncate">{p.name}</div>
+                                    <div className="h-16 flex items-center justify-center"><Monster name={p.name} laps={p.laps} size={60} isMini={true} /></div>
+                                    <div className="text-center text-lg font-black text-teal-600 leading-none">{p.laps}</div>
                                 </div>
-                            )}
+                            ))}
                         </div>
                     </div>
-                    <Leaderboard />
                 </div>
             );
         };
